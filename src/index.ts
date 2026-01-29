@@ -21,7 +21,7 @@ const plugin_init: PluginModule['plugin_init'] = async (ctx: NapCatPluginContext
   pluginState.log('info', 'Play 娱乐插件正在初始化...');
 
   plugin_config_ui = ctx.NapCatConfig.combine(
-    ctx.NapCatConfig.html('<div style="padding:10px;background:linear-gradient(135deg,rgba(106,17,203,0.1),rgba(37,117,252,0.1));border-radius:8px"><h3>🎮 Play 娱乐插件</h3><p>表情包制作 | 指令：meme列表</p></div>'),
+    ctx.NapCatConfig.html('<div style="padding:10px;background:linear-gradient(135deg,rgba(106,17,203,0.1),rgba(37,117,252,0.1));border-radius:8px"><h3>🎮 Play 娱乐插件</h3><p>表情包制作 | 指令：meme列表</p><p style="margin-top:8px;color:#666;font-size:12px">💬 交流群：631348711</p></div>'),
     ctx.NapCatConfig.boolean('enableMeme', '启用表情包', true, '启用meme表情包制作功能', true),
     ctx.NapCatConfig.text('memeApiUrl', 'API地址', 'http://datukuai.top:2233', 'meme API服务地址'),
     ctx.NapCatConfig.select('maxFileSize', '最大文件', [{ label: '5MB', value: 5 }, { label: '10MB', value: 10 }, { label: '20MB', value: 20 }], 10, '图片大小限制'),
