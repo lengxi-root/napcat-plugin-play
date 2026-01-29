@@ -6,21 +6,25 @@ import { pluginState } from '../core/state';
 
 // 发送文本回复
 export async function sendReply (event: OB11Message, content: string, ctx: NapCatPluginContext): Promise<void> {
-  if (!ctx.actions) return;
-  const params: OB11PostSendMsg = {
-    message: content, message_type: event.message_type,
-    ...(event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) }),
-  };
-  await ctx.actions.call('send_msg', params, ctx.adapterName, ctx.pluginManager.config).catch(() => { });
+  if (!ctx.actions || !content) return;
+  try {
+    const params: OB11PostSendMsg = {
+      message: content, message_type: event.message_type,
+      ...(event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) }),
+    };
+    await ctx.actions.call('send_msg', params, ctx.adapterName, ctx.pluginManager.config).catch(() => {});
+  } catch { /* 忽略发送错误 */ }
 }
 
 // 发送图片（base64）
 export async function sendImageBase64 (event: OB11Message, base64: string, ctx: NapCatPluginContext): Promise<void> {
-  if (!ctx.actions) return;
-  const msg = [{ type: 'image', data: { file: `base64://${base64}` } }];
-  const action = event.message_type === 'group' ? 'send_group_msg' : 'send_private_msg';
-  const id = event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) };
-  await ctx.actions.call(action, { ...id, message: msg } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => { });
+  if (!ctx.actions || !base64) return;
+  try {
+    const msg = [{ type: 'image', data: { file: `base64://${base64}` } }];
+    const action = event.message_type === 'group' ? 'send_group_msg' : 'send_private_msg';
+    const id = event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) };
+    await ctx.actions.call(action, { ...id, message: msg } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => {});
+  } catch { /* 忽略发送错误 */ }
 }
 
 // 提取@用户

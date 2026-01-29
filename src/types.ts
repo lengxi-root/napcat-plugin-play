@@ -1,7 +1,7 @@
 // Play 娱乐插件类型定义
 export interface PluginConfig {
   prefix: string; enableMeme: boolean; memeApiUrl: string; maxFileSize: number;
-  enableMasterProtect: boolean; forceSharp: boolean; ownerQQs: string; debug: boolean;
+  enableMasterProtect: boolean; ownerQQs: string; debug: boolean;
   [key: string]: unknown;
 }
 
