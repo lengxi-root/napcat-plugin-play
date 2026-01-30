@@ -8,6 +8,8 @@ import type { PluginConfig } from './types';
 import { DEFAULT_PLUGIN_CONFIG } from './config';
 import { pluginState } from './core/state';
 import { handleMemeCommand } from './handlers/meme-handler';
+import { handleMusicCommand } from './handlers/music-handler';
+import { handleMenuCommand } from './handlers/menu-handler';
 import { initMemeData } from './services/meme-service';
 
 export let plugin_config_ui: PluginConfigSchema = [];
@@ -21,10 +23,12 @@ const plugin_init: PluginModule['plugin_init'] = async (ctx: NapCatPluginContext
   pluginState.log('info', 'Play 娱乐插件正在初始化...');
 
   plugin_config_ui = ctx.NapCatConfig.combine(
-    ctx.NapCatConfig.html('<div style="padding:10px;background:linear-gradient(135deg,rgba(106,17,203,0.1),rgba(37,117,252,0.1));border-radius:8px"><h3>🎮 Play 娱乐插件</h3><p>表情包制作 | 指令：#meme列表</p><p style="margin-top:8px;color:#666;font-size:12px">💬 交流群：631348711</p></div>'),
+    ctx.NapCatConfig.html('<div style="padding:10px;background:linear-gradient(135deg,rgba(106,17,203,0.1),rgba(37,117,252,0.1));border-radius:8px"><h3>🎮 Play 娱乐插件</h3><p>指令:娱乐菜单</p><p style="margin-top:8px;color:#666;font-size:12px">💬 交流群：631348711</p></div>'),
     ctx.NapCatConfig.boolean('enableMeme', '启用表情包', true, '启用meme表情包制作功能', true),
-    ctx.NapCatConfig.text('prefix', '触发前缀', '#', '命令触发前缀，留空则无需前缀（容易误触发）'),
-    ctx.NapCatConfig.text('memeApiUrl', 'API地址', 'http://datukuai.top:2233', 'meme API服务地址'),
+    ctx.NapCatConfig.boolean('enableMusic', '启用点歌', true, '启用QQ音乐点歌功能', true),
+    ctx.NapCatConfig.text('prefix', '触发前缀', '', '命令触发前缀，留空则无需前缀'),
+    ctx.NapCatConfig.text('memeApiUrl', 'Meme API', 'http://datukuai.top:2233', 'meme API服务地址'),
+    ctx.NapCatConfig.text('musicApiUrl', '音乐API', 'https://a.aa.cab', '点歌API服务地址'),
     ctx.NapCatConfig.select('maxFileSize', '最大文件', [{ label: '5MB', value: 5 }, { label: '10MB', value: 10 }, { label: '20MB', value: 20 }], 10, '图片大小限制'),
     ctx.NapCatConfig.boolean('enableMasterProtect', '主人保护', true, '对主人使用攻击性meme时反向操作', true),
     ctx.NapCatConfig.text('ownerQQs', '主人QQ', '', '多个用逗号分隔'),
@@ -59,7 +63,9 @@ export const plugin_set_config = async (ctx: NapCatPluginContext, config: Plugin
 // 响应式配置控制器
 const plugin_config_controller = (_ctx: NapCatPluginContext, ui: PluginConfigUIController, config: Record<string, unknown>): (() => void) | void => {
   const memeOn = config.enableMeme !== false;
-  ['prefix', 'memeApiUrl', 'maxFileSize', 'enableMasterProtect', 'ownerQQs'].forEach(k => memeOn ? ui.showField(k) : ui.hideField(k));
+  const musicOn = config.enableMusic !== false;
+  ['memeApiUrl', 'maxFileSize', 'enableMasterProtect', 'ownerQQs'].forEach(k => memeOn ? ui.showField(k) : ui.hideField(k));
+  musicOn ? ui.showField('musicApiUrl') : ui.hideField('musicApiUrl');
   return () => { };
 };
 
@@ -67,7 +73,10 @@ const plugin_config_controller = (_ctx: NapCatPluginContext, ui: PluginConfigUIC
 const plugin_on_config_change = (_ctx: NapCatPluginContext, ui: PluginConfigUIController, key: string, _value: unknown, config: Record<string, unknown>): void => {
   if (key === 'enableMeme') {
     const on = config.enableMeme !== false;
-    ['prefix', 'memeApiUrl', 'maxFileSize', 'enableMasterProtect', 'ownerQQs'].forEach(k => on ? ui.showField(k) : ui.hideField(k));
+    ['memeApiUrl', 'maxFileSize', 'enableMasterProtect', 'ownerQQs'].forEach(k => on ? ui.showField(k) : ui.hideField(k));
+  }
+  if (key === 'enableMusic') {
+    config.enableMusic !== false ? ui.showField('musicApiUrl') : ui.hideField('musicApiUrl');
   }
 };
 
@@ -77,7 +86,13 @@ const plugin_cleanup: PluginModule['plugin_cleanup'] = async () => pluginState.l
 // 消息处理
 const plugin_onmessage: PluginModule['plugin_onmessage'] = async (ctx: NapCatPluginContext, event: OB11Message) => {
   if (event.post_type !== EventType.MESSAGE) return;
-  if (pluginState.config.enableMeme) await handleMemeCommand(event, event.raw_message || '', ctx);
+  const raw = event.raw_message || '';
+  // 先处理菜单命令
+  if (await handleMenuCommand(event, raw, ctx)) return;
+  // 处理点歌命令
+  if (pluginState.config.enableMusic && await handleMusicCommand(event, raw, ctx)) return;
+  // 处理meme命令
+  if (pluginState.config.enableMeme) await handleMemeCommand(event, raw, ctx);
 };
 
 export { plugin_init, plugin_onmessage, plugin_cleanup, plugin_config_controller, plugin_on_config_change };

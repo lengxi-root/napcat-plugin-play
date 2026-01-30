@@ -123,16 +123,18 @@ async function handleMemeGenerate (event: OB11Message, msg: string, target: stri
     const userId = String(event.user_id);
     const sender = event.sender as { nickname?: string; card?: string; sex?: string; } | undefined;
 
-    // 收集图片
-    let imgs: string[] = [...await getReplyImages(event, ctx).catch(() => []), ...extractImageUrls(event.message)];
+    // 收集图片（仅当meme需要图片时才处理）
+    let imgs: string[] = [];
     const atUsers = extractAtUsers(event.message);
-    if (!imgs.length && atUsers.length) imgs = atUsers.map(a => getAvatarUrl(a.qq as string | number));
-    if (!imgs.length && info.params_type.max_images > 0) imgs.push(getAvatarUrl(userId));
-    if (imgs.length < info.params_type.min_images && !imgs.includes(getAvatarUrl(userId))) imgs = [getAvatarUrl(userId), ...imgs];
-
-    // 主人保护
-    imgs = applyMasterProtection(code, imgs, userId, atUsers);
-    imgs = imgs.slice(0, info.params_type.max_images);
+    if (info.params_type.max_images > 0) {
+      imgs = [...await getReplyImages(event, ctx).catch(() => []), ...extractImageUrls(event.message)];
+      if (!imgs.length && atUsers.length) imgs = atUsers.map(a => getAvatarUrl(a.qq as string | number));
+      if (!imgs.length && info.params_type.min_images > 0) imgs.push(getAvatarUrl(userId));
+      if (imgs.length < info.params_type.min_images && !imgs.includes(getAvatarUrl(userId))) imgs = [getAvatarUrl(userId), ...imgs];
+      // 主人保护
+      imgs = applyMasterProtection(code, imgs, userId, atUsers);
+      imgs = imgs.slice(0, info.params_type.max_images);
+    }
 
     // 处理文本
     let texts: string[] = [];
@@ -156,11 +158,12 @@ async function handleMemeGenerate (event: OB11Message, msg: string, target: stri
     }
     if (!userInfos.length) userInfos = [{ text: sender?.card || sender?.nickname || '用户', gender: sender?.sex || 'unknown' }];
 
-    // 下载图片并生成
+    // 下载图片并生成（仅当有图片URL时才下载）
     const buffers: Buffer[] = [];
     for (const url of imgs) { const b = await downloadImage(url).catch(() => null); if (b) buffers.push(b); }
-    if (!buffers.length) { await sendReply(event, '图片下载失败', ctx); return; }
-    if (checkFileSize(buffers.map(b => ({ size: b.length })), pluginState.config.maxFileSize)) {
+    // 仅当meme需要图片但下载失败时报错
+    if (info.params_type.min_images > 0 && !buffers.length) { await sendReply(event, '图片下载失败', ctx); return; }
+    if (buffers.length && checkFileSize(buffers.map(b => ({ size: b.length })), pluginState.config.maxFileSize)) {
       await sendReply(event, `文件超限，最大${pluginState.config.maxFileSize}MB`, ctx); return;
     }
 

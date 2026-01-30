@@ -2,7 +2,18 @@
 export interface PluginConfig {
   prefix: string; enableMeme: boolean; memeApiUrl: string; maxFileSize: number;
   enableMasterProtect: boolean; ownerQQs: string; debug: boolean;
+  enableMusic: boolean; musicApiUrl: string;
   [key: string]: unknown;
+}
+
+// 音乐搜索结果
+export interface MusicSearchResult {
+  song: string; singer: string; url?: string;
+}
+
+// 音乐缓存项
+export interface MusicCacheItem {
+  type: string; songs: MusicSearchResult[]; keyword: string;
 }
 
 export interface MemeParamsType {

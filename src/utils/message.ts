@@ -48,3 +48,18 @@ export async function getReplyImages (event: OB11Message, ctx: NapCatPluginConte
   const result = await ctx.actions.call('get_msg', { message_id: match[1] } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => null) as { message?: unknown; } | null;
   return result?.message ? extractImageUrls(result.message) : [];
 }
+
+// 发送合并转发消息
+export async function sendForwardMsg (event: OB11Message, messages: string[], ctx: NapCatPluginContext): Promise<void> {
+  if (!ctx.actions || !messages.length) return;
+  try {
+    // 构建合并转发节点
+    const nodes = messages.map(content => ({
+      type: 'node',
+      data: { name: 'Play助手', uin: String(event.self_id || '10000'), content: [{ type: 'text', data: { text: content } }] }
+    }));
+    const action = event.message_type === 'group' ? 'send_group_forward_msg' : 'send_private_forward_msg';
+    const id = event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) };
+    await ctx.actions.call(action, { ...id, messages: nodes } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => { });
+  } catch { /* 忽略发送错误 */ }
+}
