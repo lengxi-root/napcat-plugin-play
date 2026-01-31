@@ -10,30 +10,30 @@ import { initMemeData, updateMemeData, findLongestMatchingKey, getMemeDetail, se
 import fs from 'fs';
 import path from 'path';
 
-// 处理meme命令
+// 处理meme命令（仅表情生成需要前缀）
 export async function handleMemeCommand (event: OB11Message, raw: string, ctx: NapCatPluginContext): Promise<boolean> {
   if (!pluginState.initialized) await initMemeData();
   const prefix = pluginState.config.prefix ?? '';
   const userId = String(event.user_id);
 
-  // 先清理 @ 和 CQ 码，保留核心内容
+  // 清理 CQ 码
   const cleaned = raw.replace(/\[CQ:at,qq=\d+\]/g, '').replace(/\[CQ:reply,id=-?\d+\]/g, '').trim();
+
+  // 管理命令（无需前缀）
+  if (/^设置主人\s*\d+/.test(cleaned)) { await handleAddMaster(event, cleaned, userId, ctx); return true; }
+  if (/^删除主人\s*\d+/.test(cleaned)) { await handleRemoveMaster(event, cleaned, userId, ctx); return true; }
+  if (/^主人列表$/.test(cleaned)) { await handleMasterList(event, ctx); return true; }
+
+  // meme 辅助命令（无需前缀）
+  if (/^(meme(s)?|表情包)列表$/.test(cleaned)) { await handleMemeList(event, ctx); return true; }
+  if (/^随机(meme(s)?|表情包)/.test(cleaned)) { await handleRandomMeme(event, ctx); return true; }
+  if (/^(meme(s)?|表情包)帮助/.test(cleaned)) { await sendReply(event, HELP_MESSAGE, ctx); return true; }
+  if (/^(meme(s)?|表情包)搜索/.test(cleaned)) { await handleMemeSearch(event, cleaned, ctx); return true; }
+  if (/^(meme(s)?|表情包)更新/.test(cleaned)) { await handleMemeUpdate(event, ctx); return true; }
+
+  // 表情生成（需要前缀）
   if (prefix && !cleaned.startsWith(prefix)) return false;
   const content = prefix ? cleaned.slice(prefix.length).trim() : cleaned;
-
-  // 管理命令
-  if (prefix && /^设置主人\s*\d+/.test(content)) { await handleAddMaster(event, content, userId, ctx); return true; }
-  if (prefix && /^删除主人\s*\d+/.test(content)) { await handleRemoveMaster(event, content, userId, ctx); return true; }
-  if (prefix && /^主人列表$/.test(content)) { await handleMasterList(event, ctx); return true; }
-
-  // meme 命令
-  if (/^(meme(s)?|表情包)列表$/.test(content)) { await handleMemeList(event, ctx); return true; }
-  if (/^随机(meme(s)?|表情包)/.test(content)) { await handleRandomMeme(event, ctx); return true; }
-  if (/^(meme(s)?|表情包)帮助/.test(content)) { await sendReply(event, HELP_MESSAGE, ctx); return true; }
-  if (/^(meme(s)?|表情包)搜索/.test(content)) { await handleMemeSearch(event, content, ctx); return true; }
-  if (/^(meme(s)?|表情包)更新/.test(content)) { await handleMemeUpdate(event, ctx); return true; }
-
-  // 表情生成
   const target = findLongestMatchingKey(content);
   if (target) { await handleMemeGenerate(event, content, target, ctx); return true; }
   return false;

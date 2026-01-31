@@ -16,15 +16,20 @@ export async function sendReply (event: OB11Message, content: string, ctx: NapCa
   } catch { /* 忽略发送错误 */ }
 }
 
-// 发送图片（base64）
-export async function sendImageBase64 (event: OB11Message, base64: string, ctx: NapCatPluginContext): Promise<void> {
-  if (!ctx.actions || !base64) return;
+// 发送图片（支持 URL 或 base64://）
+export async function sendImage (event: OB11Message, file: string, ctx: NapCatPluginContext): Promise<void> {
+  if (!ctx.actions || !file) return;
   try {
-    const msg = [{ type: 'image', data: { file: `base64://${base64}` } }];
+    const msg = [{ type: 'image', data: { file } }];
     const action = event.message_type === 'group' ? 'send_group_msg' : 'send_private_msg';
     const id = event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) };
     await ctx.actions.call(action, { ...id, message: msg } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => {});
   } catch { /* 忽略发送错误 */ }
+}
+
+// 发送图片（base64）
+export async function sendImageBase64 (event: OB11Message, base64: string, ctx: NapCatPluginContext): Promise<void> {
+  await sendImage(event, `base64://${base64}`, ctx);
 }
 
 // 提取@用户

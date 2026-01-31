@@ -8,28 +8,31 @@ import { DEFAULT_PLUGIN_CONFIG } from '../config';
 class PluginState {
   logger: PluginLogger | null = null;
   actions: ActionMap | undefined;
-  adapterName: string = '';
+  adapterName = '';
   networkConfig: NetworkAdapterConfig | null = null;
   config: PluginConfig = { ...DEFAULT_PLUGIN_CONFIG };
-  dataPath: string = '';
+  dataPath = '';
   keyMap: KeywordMap = {};
   infos: MemeInfoMap = {};
-  initialized: boolean = false;
+  initialized = false;
 
-  log (level: 'info' | 'warn' | 'error', msg: string, ...args: unknown[]): void {
-    if (!this.logger) return;
-    this.logger[level](`[Play] ${msg}`, ...args);
+  // 日志
+  log(level: 'info' | 'warn' | 'error', msg: string, ...args: unknown[]): void {
+    this.logger?.[level](`[Play] ${msg}`, ...args);
   }
 
-  debug (msg: string, ...args: unknown[]): void {
-    if (this.logger && this.config.debug) this.logger.info(`[Play] [DEBUG] ${msg}`, ...args);
+  debug(msg: string, ...args: unknown[]): void {
+    if (this.config.debug) this.logger?.info(`[Play] [DEBUG] ${msg}`, ...args);
   }
 
-  getMasterQQs (): string[] {
-    return this.config.ownerQQs ? this.config.ownerQQs.split(',').map(q => q.trim()).filter(q => q) : [];
+  // 主人管理
+  getMasterQQs(): string[] {
+    return this.config.ownerQQs?.split(',').map(q => q.trim()).filter(Boolean) || [];
   }
 
-  isMaster (userId: string): boolean { return this.getMasterQQs().includes(userId); }
+  isMaster(userId: string): boolean {
+    return this.getMasterQQs().includes(userId);
+  }
 }
 
 export const pluginState = new PluginState();

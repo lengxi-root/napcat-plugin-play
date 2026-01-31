@@ -39,13 +39,10 @@ class LRUCache<K, V> {
 // 音乐搜索缓存
 const musicCache = new LRUCache<string, MusicCacheItem>(100);
 
-// 处理点歌命令
+// 处理点歌命令（无需前缀）
 export async function handleMusicCommand (event: OB11Message, raw: string, ctx: NapCatPluginContext): Promise<boolean> {
   if (!pluginState.config.enableMusic) return false;
-  const prefix = pluginState.config.prefix ?? '';
-  const cleaned = raw.replace(/\[CQ:[^\]]+\]/g, '').trim();
-  if (prefix && !cleaned.startsWith(prefix)) return false;
-  const content = prefix ? cleaned.slice(prefix.length).trim() : cleaned;
+  const content = raw.replace(/\[CQ:[^\]]+\]/g, '').trim();
   const userId = String(event.user_id);
 
   // 点歌搜索
