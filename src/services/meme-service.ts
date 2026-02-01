@@ -107,7 +107,15 @@ export async function generateMeme (code: string, images: Buffer[], texts: strin
   texts.forEach(t => form.append('texts', t));
   if (args) form.set('args', args);
   const res = await fetch(`${pluginState.config.memeApiUrl}/memes/${code}/`, { method: 'POST', body: form }).catch(() => null);
-  if (!res || !res.ok) return res ? await res.text() : '请求失败';
+  if (!res || !res.ok) {
+    if (!res) return `meme表情生成【${code}】出现了错误：请求失败`;
+    const text = await res.text();
+    try {
+      const json = JSON.parse(text);
+      const err = json.detail || json.error || json.message || '未知错误';
+      return `meme表情生成【${code}】出现了错误：${err}`;
+    } catch { return `meme表情生成【${code}】出现了错误：${text.length > 50 ? '生成失败' : text}`; }
+  }
   return Buffer.from(await (await res.blob()).arrayBuffer());
 }
 
