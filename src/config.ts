@@ -16,13 +16,6 @@ export const DEFAULT_PLUGIN_CONFIG: PluginConfig = {
   drawApiUrl: 'https://i.elaina.vin/api/openai',
 };
 
-// 主人保护列表（攻击性 meme 类型）
-export const MASTER_PROTECT_LIST = [
-  'lash', 'do', 'beat_up', 'little_do', 'punch', 'kick', 'slap', 'throw', 'hit', 'hammer',
-  'bite', 'eat', 'swallow', 'jue', 'rip', 'tear', 'scratch', 'pinch', 'diss', 'mock',
-  'laugh_at', 'point', 'blame', 'trash', 'garbage', 'flush', 'bury', 'burn',
-];
-
 // 数据目录配置
 export const DATA_DIR_NAME = 'memes';
 export const CACHE_FILES = {

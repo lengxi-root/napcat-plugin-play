@@ -5,7 +5,7 @@ import type { UserInfo, GroupMemberInfo } from '../types';
 import { pluginState } from '../core/state';
 import { sendReply, sendImageBase64, extractAtUsers, extractImageUrls, getReplyImages } from '../utils/message';
 import { getAvatarUrl, trimStart, checkFileSize } from '../utils/common';
-import { HELP_MESSAGE, MASTER_PROTECT_LIST } from '../config';
+import { HELP_MESSAGE } from '../config';
 import { initMemeData, updateMemeData, findLongestMatchingKey, getMemeDetail, searchMemeKeywords, getRandomMemeKey, handleMemeArgs, getMemeListImageBase64, generateMeme, downloadImage } from '../services/meme-service';
 import fs from 'fs';
 import path from 'path';
@@ -173,9 +173,10 @@ async function handleMemeGenerate (event: OB11Message, msg: string, target: stri
   } catch { await sendReply(event, '表情生成出错', ctx).catch(() => { }); }
 }
 
-// 主人保护
-function applyMasterProtection (code: string, imgs: string[], senderId: string, atUsers: UserInfo[]): string[] {
-  if (!pluginState.config.enableMasterProtect || !MASTER_PROTECT_LIST.includes(code)) return imgs;
+// 主人保护（开启后所有 meme 都反转）
+function applyMasterProtection (_code: string, imgs: string[], senderId: string, atUsers: UserInfo[]): string[] {
+  if (!pluginState.config.enableMasterProtect) return imgs;
+
   const masters = pluginState.getMasterQQs();
   if (!masters.length || masters.includes(senderId)) return imgs;
 

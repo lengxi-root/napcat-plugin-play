@@ -41,7 +41,7 @@ const plugin_init: PluginModule['plugin_init'] = async (ctx: NapCatPluginContext
     // 其他设置
     ctx.NapCatConfig.html('<b>⚙️ 其他设置</b>'),
     ctx.NapCatConfig.select('maxFileSize', '图片大小限制', [5, 10, 20].map(n => ({ label: `${n}MB`, value: n })), 10),
-    ctx.NapCatConfig.boolean('enableMasterProtect', '主人保护', true, '攻击性 meme 反向操作'),
+    ctx.NapCatConfig.boolean('enableMasterProtect', '主人保护', true, '所有 meme 对主人反向操作'),
     ctx.NapCatConfig.text('ownerQQs', '主人QQ', '', '多个用逗号分隔'),
     ctx.NapCatConfig.boolean('debug', '调试模式', false, '显示详细日志')
   );

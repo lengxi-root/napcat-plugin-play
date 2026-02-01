@@ -155,6 +155,19 @@ async function handlePresetDraw(
   return await executeDrawRequest(event, prompt, imageUrls, ctx);
 }
 
+// 获取请求附加信息
+async function getRequestMeta(event: OB11Message, ctx: NapCatPluginContext): Promise<{ bot_id?: string; owner_ids?: string[]; user_id: string }> {
+  const userId = String(event.user_id);
+  const ownerQQs = pluginState.config.ownerQQs;
+  const ownerIds = ownerQQs ? ownerQQs.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean) : [];
+  let botId: string | undefined;
+  try {
+    const loginInfo = await ctx.actions?.call('get_login_info', {}, ctx.adapterName, ctx.pluginManager.config) as { user_id?: number | string } | undefined;
+    botId = loginInfo?.user_id ? String(loginInfo.user_id) : undefined;
+  } catch { /* ignore */ }
+  return { bot_id: botId, owner_ids: ownerIds.length ? ownerIds : undefined, user_id: userId };
+}
+
 // 执行绘画请求
 async function executeDrawRequest(
   event: OB11Message,
@@ -172,6 +185,9 @@ async function executeDrawRequest(
       ? [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageUrls[0] } }] }]
       : [{ role: 'user', content: prompt }];
 
+    // 获取请求附加信息
+    const meta = await getRequestMeta(event, ctx);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 300000);
 
@@ -180,7 +196,10 @@ async function executeDrawRequest(
       response = await fetch(`${apiUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: DRAW_MODEL, messages, stream: false, temperature: 0.7, top_p: 1, frequency_penalty: 0, presence_penalty: 0, type: 3 }),
+        body: JSON.stringify({ 
+          model: DRAW_MODEL, messages, stream: false, temperature: 0.7, top_p: 1, frequency_penalty: 0, presence_penalty: 0, type: 3,
+          ...meta,  // 添加 bot_id, owner_ids, user_id
+        }),
         signal: controller.signal,
       });
     } finally {
@@ -188,7 +207,11 @@ async function executeDrawRequest(
     }
 
     if (!response.ok) {
-      await sendReply(event, `${hasImage ? '图片修改' : '绘画'}失败: ${response.status}`, ctx);
+      if (response.status === 500 && hasImage) {
+        await sendReply(event, '❌ 图片格式不支持，请使用 PNG/JPG/WEBP 格式（不支持 GIF 动图）', ctx);
+      } else {
+        await sendReply(event, `${hasImage ? '图片修改' : '绘画'}失败: ${response.status}`, ctx);
+      }
       return true;
     }
 
