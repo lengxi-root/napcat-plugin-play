@@ -11,17 +11,17 @@ let promptsCache: Record<string, string> = {};
 let lastFetchTime = 0;
 const CACHE_TTL = 60 * 60 * 1000; // 1小时
 
-function getAvatarUrl(qq: string | number): string {
+function getAvatarUrl (qq: string | number): string {
   return `https://q1.qlogo.cn/g?b=qq&nk=${qq}&s=640`;
 }
 
 // 获取预设提示词列表
-export function getPresetNames(): string[] {
+export function getPresetNames (): string[] {
   return Object.keys(promptsCache);
 }
 
 // 刷新提示语缓存
-export async function refreshPromptsCache(): Promise<void> {
+export async function refreshPromptsCache (): Promise<void> {
   const now = Date.now();
   if (now - lastFetchTime < CACHE_TTL && Object.keys(promptsCache).length > 0) return;
 
@@ -31,7 +31,7 @@ export async function refreshPromptsCache(): Promise<void> {
 
     const res = await fetch(`${apiUrl}/image`, { signal: AbortSignal.timeout(10000) });
     if (res.ok) {
-      const data = await res.json() as { prompts?: Record<string, string> };
+      const data = await res.json() as { prompts?: Record<string, string>; };
       if (data.prompts) {
         promptsCache = data.prompts;
         lastFetchTime = now;
@@ -44,7 +44,7 @@ export async function refreshPromptsCache(): Promise<void> {
 }
 
 // 处理绘画命令
-export async function handleDrawCommand(event: OB11Message, raw: string, ctx: NapCatPluginContext): Promise<boolean> {
+export async function handleDrawCommand (event: OB11Message, raw: string, ctx: NapCatPluginContext): Promise<boolean> {
   const text = raw.replace(/\[CQ:[^\]]+\]/g, '').trim();
 
   // 刷新提示语缓存
@@ -91,9 +91,11 @@ export async function handleDrawCommand(event: OB11Message, raw: string, ctx: Na
   }
 
   // 检查是否使用预设提示语
+  let usedPresetName: string | undefined;
   const presetPrompt = promptsCache[prompt];
   if (presetPrompt) {
     pluginState.debug(`[Draw] 使用预设提示语: ${prompt}`);
+    usedPresetName = prompt;
     prompt = presetPrompt;
   }
 
@@ -105,11 +107,11 @@ export async function handleDrawCommand(event: OB11Message, raw: string, ctx: Na
     if (atUsers.length > 0 && atUsers[0].qq) imageUrls = [getAvatarUrl(atUsers[0].qq)];
   }
 
-  return await executeDrawRequest(event, prompt, imageUrls, ctx);
+  return await executeDrawRequest(event, prompt, imageUrls, ctx, usedPresetName);
 }
 
 // 处理预设绘画
-async function handlePresetDraw(
+async function handlePresetDraw (
   event: OB11Message,
   presetName: string,
   prompt: string,
@@ -152,28 +154,30 @@ async function handlePresetDraw(
   }
 
   pluginState.debug(`[Draw] 预设: ${presetName}, 图片: ${imageUrls[0]}`);
-  return await executeDrawRequest(event, prompt, imageUrls, ctx);
+  return await executeDrawRequest(event, prompt, imageUrls, ctx, presetName);
 }
 
 // 获取请求附加信息
-async function getRequestMeta(event: OB11Message, ctx: NapCatPluginContext): Promise<{ bot_id?: string; owner_ids?: string[]; user_id: string }> {
+async function getRequestMeta (event: OB11Message, ctx: NapCatPluginContext): Promise<{ bot_id?: string; owner_ids?: string[]; user_id: string; group_id?: string; }> {
   const userId = String(event.user_id);
+  const groupId = (event as { group_id?: number | string; }).group_id ? String((event as { group_id?: number | string; }).group_id) : undefined;
   const ownerQQs = pluginState.config.ownerQQs;
   const ownerIds = ownerQQs ? ownerQQs.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean) : [];
   let botId: string | undefined;
   try {
-    const loginInfo = await ctx.actions?.call('get_login_info', {}, ctx.adapterName, ctx.pluginManager.config) as { user_id?: number | string } | undefined;
+    const loginInfo = await ctx.actions?.call('get_login_info', {}, ctx.adapterName, ctx.pluginManager.config) as { user_id?: number | string; } | undefined;
     botId = loginInfo?.user_id ? String(loginInfo.user_id) : undefined;
   } catch { /* ignore */ }
-  return { bot_id: botId, owner_ids: ownerIds.length ? ownerIds : undefined, user_id: userId };
+  return { bot_id: botId, owner_ids: ownerIds.length ? ownerIds : undefined, user_id: userId, group_id: groupId };
 }
 
 // 执行绘画请求
-async function executeDrawRequest(
+async function executeDrawRequest (
   event: OB11Message,
   prompt: string,
   imageUrls: string[],
-  ctx: NapCatPluginContext
+  ctx: NapCatPluginContext,
+  presetName?: string
 ): Promise<boolean> {
   const apiUrl = pluginState.config.drawApiUrl;
   const hasImage = imageUrls.length > 0;
@@ -196,9 +200,11 @@ async function executeDrawRequest(
       response = await fetch(`${apiUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           model: DRAW_MODEL, messages, stream: false, temperature: 0.7, top_p: 1, frequency_penalty: 0, presence_penalty: 0, type: 3,
-          ...meta,  // 添加 bot_id, owner_ids, user_id
+          ...meta,  // 添加 bot_id, owner_ids, user_id, group_id
+          preset: presetName || undefined,  // 预设名称
+          image_url: hasImage ? imageUrls[0] : undefined,  // 图片链接
         }),
         signal: controller.signal,
       });
@@ -216,8 +222,8 @@ async function executeDrawRequest(
     }
 
     const result = await response.json() as {
-      choices?: { message?: { content?: string | { type: string; image_url?: { url: string } }[] }; finish_reason?: string }[];
-      error?: { message?: string };
+      choices?: { message?: { content?: string | { type: string; image_url?: { url: string; }; }[]; }; finish_reason?: string; }[];
+      error?: { message?: string; };
     };
 
     if (result.error) {
