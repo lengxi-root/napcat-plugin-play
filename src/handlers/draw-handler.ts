@@ -213,11 +213,7 @@ async function executeDrawRequest (
     }
 
     if (!response.ok) {
-      if (response.status === 500 && hasImage) {
-        await sendReply(event, '❌ 图片格式不支持，请使用 PNG/JPG/WEBP 格式（不支持 GIF 动图）', ctx);
-      } else {
-        await sendReply(event, `${hasImage ? '图片修改' : '绘画'}失败: ${response.status}`, ctx);
-      }
+      await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
       return true;
     }
 
@@ -227,7 +223,7 @@ async function executeDrawRequest (
     };
 
     if (result.error) {
-      await sendReply(event, `${hasImage ? '图片修改' : '绘画'}失败: ${result.error.message || '未知错误'}`, ctx);
+      await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
       return true;
     }
 
@@ -258,14 +254,13 @@ async function executeDrawRequest (
     if (imageUrl) {
       await sendImage(event, imageUrl, ctx);
     } else {
-      const errText = typeof content === 'string' && content ? content.slice(0, 500) : 'API 返回内容为空';
-      await sendReply(event, `${hasImage ? '图片修改' : '绘画'}失败: ${errText}`, ctx);
+      await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
     }
 
     return true;
   } catch (error) {
-    const errMsg = error instanceof Error && error.name === 'AbortError' ? '绘画超时，请稍后重试' : `绘画失败: ${String(error)}`;
-    await sendReply(event, errMsg, ctx);
+    pluginState.debug(`[Draw] 异常: ${String(error)}`);
+    await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
     return true;
   }
 }

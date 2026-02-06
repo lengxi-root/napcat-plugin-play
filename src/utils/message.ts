@@ -32,6 +32,17 @@ export async function sendImageBase64 (event: OB11Message, base64: string, ctx: 
   await sendImage(event, `base64://${base64}`, ctx);
 }
 
+// 发送语音
+export async function sendRecord (event: OB11Message, file: string, ctx: NapCatPluginContext): Promise<void> {
+  if (!ctx.actions || !file) return;
+  try {
+    const msg = [{ type: 'record', data: { file } }];
+    const action = event.message_type === 'group' ? 'send_group_msg' : 'send_private_msg';
+    const id = event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) };
+    await ctx.actions.call(action, { ...id, message: msg } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => {});
+  } catch { /* 忽略发送错误 */ }
+}
+
 // 提取@用户
 export function extractAtUsers (message: unknown): UserInfo[] {
   if (!Array.isArray(message)) return [];

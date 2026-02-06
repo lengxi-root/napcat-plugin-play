@@ -38,6 +38,7 @@ async function showMenu (event: OB11Message, ctx: NapCatPluginContext): Promise<
   // 点歌功能
   if (pluginState.config.enableMusic) {
     msgList.push(`🎵 点歌功能
+• 哈基米 - 随机一曲哈基米
 • 点歌+歌名 - 搜索歌曲
 • 听+序号 - 播放搜索到的歌曲
 示例：点歌 晴天 → 听1`);

@@ -11,6 +11,7 @@ import { handleMusicCommand } from './handlers/music-handler';
 import { handleMenuCommand } from './handlers/menu-handler';
 import { handleDrawCommand } from './handlers/draw-handler';
 import { initMemeData } from './services/meme-service';
+import { sendRecord } from './utils/message';
 
 export let plugin_config_ui: PluginConfigSchema = [];
 
@@ -107,6 +108,14 @@ const plugin_onmessage: PluginModule['plugin_onmessage'] = async (ctx: NapCatPlu
   if (event.post_type !== 'message') return;
 
   const raw = event.raw_message || '';
+
+  const text = raw.replace(/\[CQ:[^\]]+\]/g, '').trim();
+
+  // 哈基米：随机语音
+  if (text === '哈基米') {
+    await sendRecord(event, 'https://i.elaina.vin/api/%E5%93%88%E5%9F%BA%E7%B1%B3/', ctx);
+    return;
+  }
 
   // 按优先级处理命令
   if (await handleMenuCommand(event, raw, ctx)) return;
