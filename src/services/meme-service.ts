@@ -102,13 +102,24 @@ export function getMemeListImageBase64 (): string | null {
 
 // 生成meme
 export async function generateMeme (code: string, images: Buffer[], texts: string[], args?: string): Promise<Buffer | string> {
+  const apiUrl = pluginState.config.memeApiUrl;
+  const url = `${apiUrl}/memes/${code}/`;
   const form = new FormData();
   images.forEach((b, i) => form.append('images', new Blob([b], { type: 'image/jpeg' }), `img${i}.jpg`));
   texts.forEach(t => form.append('texts', t));
   if (args) form.set('args', args);
-  const res = await fetch(`${pluginState.config.memeApiUrl}/memes/${code}/`, { method: 'POST', body: form }).catch(() => null);
-  if (!res || !res.ok) {
-    if (!res) return `meme表情生成【${code}】出现了错误：请求失败`;
+
+  let res: Response | null = null;
+  let lastErr = '';
+  try {
+    res = await fetch(url, { method: 'POST', body: form, signal: AbortSignal.timeout(15000) });
+  } catch (e: any) {
+    lastErr = e?.message || String(e);
+    pluginState.log('warn', `Meme API 请求失败: ${lastErr} | URL: ${url}`);
+  }
+
+  if (!res) return `meme表情生成【${code}】出现了错误：${lastErr || '请求失败'}\nAPI地址: ${apiUrl}`;
+  if (!res.ok) {
     const text = await res.text();
     try {
       const json = JSON.parse(text);
