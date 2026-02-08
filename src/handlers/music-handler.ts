@@ -3,7 +3,7 @@ import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plu
 import type { OB11Message } from 'napcat-types/napcat-onebot/types/index';
 import type { MusicSearchResult, MusicCacheItem } from '../types';
 import { pluginState } from '../core/state';
-import { sendReply, sendForwardMsg } from '../utils/message';
+import { sendReply, sendRecord, sendForwardMsg } from '../utils/message';
 
 // LRU缓存实现
 class LRUCache<K, V> {
@@ -136,22 +136,11 @@ async function playMusic (event: OB11Message, idx: number, userId: string, ctx: 
       return;
     }
 
-    // 发送语音消息
-    await sendVoice(event, data.data.music, ctx);
+    // 发送语音消息（复用 message.ts 的 sendRecord）
+    await sendRecord(event, data.data.music, ctx);
   } catch {
     await sendReply(event, '播放歌曲时出错，请稍后重试', ctx);
   }
-}
-
-// 发送语音消息
-async function sendVoice (event: OB11Message, url: string, ctx: NapCatPluginContext): Promise<void> {
-  if (!ctx.actions) return;
-  try {
-    const msg = [{ type: 'record', data: { file: url } }];
-    const action = event.message_type === 'group' ? 'send_group_msg' : 'send_private_msg';
-    const id = event.message_type === 'group' ? { group_id: String(event.group_id) } : { user_id: String(event.user_id) };
-    await ctx.actions.call(action, { ...id, message: msg } as never, ctx.adapterName, ctx.pluginManager.config).catch(() => { });
-  } catch { /* 忽略错误 */ }
 }
 
 // 清理文本中的特殊字符

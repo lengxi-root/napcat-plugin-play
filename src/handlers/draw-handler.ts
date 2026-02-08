@@ -3,17 +3,16 @@ import type { NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plu
 import type { OB11Message } from 'napcat-types/napcat-onebot/types/index';
 import { pluginState } from '../core/state';
 import { sendReply, sendImage, extractImageUrls, getReplyImages, extractAtUsers } from '../utils/message';
+import { getAvatarUrl } from '../utils/common';
 
 const DRAW_MODEL = 'gemini-3-pro-image';
+const DRAW_TIMEOUT = 300000; // 5分钟
+const API_ERROR_MSG = '⚠️ 因上游接口超限导致，暂时无法使用。';
 
 // 提示语缓存
 let promptsCache: Record<string, string> = {};
 let lastFetchTime = 0;
 const CACHE_TTL = 60 * 60 * 1000; // 1小时
-
-function getAvatarUrl (qq: string | number): string {
-  return `https://q1.qlogo.cn/g?b=qq&nk=${qq}&s=640`;
-}
 
 // 获取预设提示词列表
 export function getPresetNames (): string[] {
@@ -193,7 +192,7 @@ async function executeDrawRequest (
     const meta = await getRequestMeta(event, ctx);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000);
+    const timeoutId = setTimeout(() => controller.abort(), DRAW_TIMEOUT);
 
     let response: Response;
     try {
@@ -213,7 +212,7 @@ async function executeDrawRequest (
     }
 
     if (!response.ok) {
-      await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
+      await sendReply(event, API_ERROR_MSG, ctx);
       return true;
     }
 
@@ -223,7 +222,7 @@ async function executeDrawRequest (
     };
 
     if (result.error) {
-      await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
+      await sendReply(event, API_ERROR_MSG, ctx);
       return true;
     }
 
@@ -254,13 +253,13 @@ async function executeDrawRequest (
     if (imageUrl) {
       await sendImage(event, imageUrl, ctx);
     } else {
-      await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
+      await sendReply(event, API_ERROR_MSG, ctx);
     }
 
     return true;
   } catch (error) {
     pluginState.debug(`[Draw] 异常: ${String(error)}`);
-    await sendReply(event, '⚠️ 因上游接口超限导致，暂时无法使用。', ctx);
+    await sendReply(event, API_ERROR_MSG, ctx);
     return true;
   }
 }
