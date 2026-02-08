@@ -89,14 +89,11 @@ export function handleMemeArgs (key: string, args: string, userInfos: UserInfo[]
   return JSON.stringify(obj);
 }
 
-// 获取列表图片base64
+// 获取列表图片base64（与 mjs 同目录）
 export function getMemeListImageBase64 (): string | null {
   if (memeListImageCache) return memeListImageCache;
-  const dir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-  const paths = [path.join(dir, 'meme-list.png'), path.join(process.cwd(), 'plugins', 'napcat-plugin-play', 'meme-list.png')];
-  for (const p of paths) {
-    if (fs.existsSync(p)) { memeListImageCache = fs.readFileSync(p).toString('base64'); return memeListImageCache; }
-  }
+  const p = path.join(path.dirname(fileURLToPath(import.meta.url)), 'meme-list.png');
+  if (fs.existsSync(p)) { memeListImageCache = fs.readFileSync(p).toString('base64'); return memeListImageCache; }
   return null;
 }
 
